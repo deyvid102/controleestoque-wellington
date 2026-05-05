@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(cors());
 
 // Uso das Rotas
-app.use('/operadores', routeOperador);
+app.use('/operadores', routeOperador); // O login estará em /operadores/login
 app.use('/pedidos', routePedido);
 app.use('/produtos', routeProduto);
 
