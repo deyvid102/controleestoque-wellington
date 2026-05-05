@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 import { useTheme } from '@/styles/ThemeContext';
-import api from "@/services/api.js";
+import api from "@/services/api";
 
 const LoginPage = () => {
   const { isDarkMode } = useTheme();
