@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 import { useTheme } from '@/styles/ThemeContext';
-import api from '@/services/api';
+import api from "@/services/api.js";
 
 const LoginPage = () => {
   const { isDarkMode } = useTheme();
@@ -96,7 +96,7 @@ const LoginPage = () => {
               onChange={handleChange}
               className={inputStyle}
             />
-            
+
           </div>
 
           <div className="relative">
