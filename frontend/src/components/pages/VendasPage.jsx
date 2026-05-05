@@ -4,7 +4,7 @@ import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { useTheme } from '@/styles/ThemeContext';
 import ModalPedidos from '@/components/modals/ModalPedidos';
 import ModalConfirm from '@/components/modals/ModalConfirm'; 
-import FilterBar from '@/components/others/FilterBar'; // Ajustado para components/others
+import FilterBar from '@/components/others/FilterBar';
 import Pagination from '@/styles/Pagination'; 
 import api from '@/services/api';
 
@@ -22,13 +22,12 @@ const VendasPage = () => {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10;
 
-  // Estado inicial dos filtros para facilitar o "Limpar tudo"
   const filtrosIniciais = {
     busca: '', 
     pago: 'todos', 
     status: 'todos',
     dataPedido: '',
-    dataEntrega: '',
+    dataEntregue: '', // Corrigido de dataEntrega para dataEntregue
     precoMin: '',
     precoMax: ''
   };
@@ -36,17 +35,42 @@ const VendasPage = () => {
   const [filtros, setFiltros] = useState(filtrosIniciais);
 
   const formatarDataBR = (data) => {
-    if (!data) return '--/--/--';
-    const [ano, mes, dia] = data.split('T')[0].split('-');
-    return `${dia}/${mes}/${ano}`;
+    if (!data || data === '') return '--/--/--';
+    try {
+      const dataLimpa = data.includes('T') ? data.split('T')[0] : data;
+      const partes = dataLimpa.split('-');
+      
+      if (partes.length !== 3) return '--/--/--';
+      
+      const ano = partes[0].slice(-4); 
+      const mes = partes[1];
+      const dia = partes[2];
+      
+      return `${dia}/${mes}/${ano}`;
+    } catch (e) {
+      return '--/--/--';
+    }
   };
 
   const fetchPedidos = async () => {
     try {
       setLoading(true);
       const response = await api.get('/pedidos');
+      
+      console.log("=== PEDIDOS RECEBIDOS DA API ===");
+      // Tenta pegar dataEntregue (novo) ou dataEntrega (antigo)
+      console.table(response.data.map(p => ({
+        id: p._id,
+        cliente: typeof p.cliente === 'object' ? p.cliente?.nome : p.cliente,
+        "Data": p.dataEntregue || p.dataEntrega // Fallback para dados antigos
+      })));
+
       setPedidos(response.data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+    } catch (error) { 
+        console.error("Erro ao buscar pedidos:", error); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const pedidosFiltrados = pedidos.filter(pedido => {
@@ -58,16 +82,17 @@ const VendasPage = () => {
     const matchesPago = filtros.pago === 'todos' || (filtros.pago === 'pago' ? pedido.pago === true : pedido.pago === false);
     const matchesStatus = filtros.status === 'todos' || pedido.status === filtros.status;
     
-    // Datas - usando dataEntregue do banco
     const matchesDataPedido = !filtros.dataPedido || (pedido.dataPedido && pedido.dataPedido.startsWith(filtros.dataPedido));
-    const matchesDataEntrega = !filtros.dataEntrega || (pedido.dataEntregue && pedido.dataEntregue.startsWith(filtros.dataEntrega));
-
-    // Lógica de Preço (Refinada para não travar a lista se vazio)
+    // Corrigido para usar dataEntregue tanto no filtro quanto no objeto do pedido
+    const matchesDataEntregue = !filtros.dataEntregue || (
+      (pedido.dataEntregue && pedido.dataEntregue.startsWith(filtros.dataEntregue)) || 
+      (pedido.dataEntrega && pedido.dataEntrega.startsWith(filtros.dataEntregue))
+    );
     const valorTotal = Number(pedido.total || 0);
     const matchesMin = filtros.precoMin === '' || valorTotal >= Number(filtros.precoMin);
     const matchesMax = filtros.precoMax === '' || valorTotal <= Number(filtros.precoMax);
 
-    return matchesBusca && matchesPago && matchesStatus && matchesDataPedido && matchesDataEntrega && matchesMin && matchesMax;
+    return matchesBusca && matchesPago && matchesStatus && matchesDataPedido && matchesDataEntregue && matchesMin && matchesMax;
   });
 
   const totalPaginas = Math.ceil(pedidosFiltrados.length / itensPorPagina);
@@ -99,7 +124,6 @@ const VendasPage = () => {
 
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Vendas</h1>
         <div className="flex w-full sm:w-auto gap-2">
@@ -117,7 +141,6 @@ const VendasPage = () => {
         </div>
       </div>
 
-      {/* Busca Rápida */}
       <div className={`relative rounded-xl border shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
         <input 
@@ -127,7 +150,6 @@ const VendasPage = () => {
         />
       </div>
       
-      {/* Tabela de Vendas (Permanecendo com o layout anterior que você aprovou) */}
       {pedidosFiltrados.length === 0 && !loading ? (
         <div className={`text-center py-20 rounded-xl border border-dashed transition-colors ${
           isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-300'
@@ -193,7 +215,6 @@ const VendasPage = () => {
             </table>
           </div>
           
-          {/* Mobile Cards */}
           <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
              {pedidosExibidos.map(pedido => (
                  <div key={pedido._id} className="p-4 space-y-3">
@@ -221,7 +242,6 @@ const VendasPage = () => {
         <Pagination currentPage={paginaAtual} totalPages={totalPaginas} onPageChange={(page) => setPaginaAtual(page)} />
       )}
 
-      {/* Sidebar de Filtros */}
       <FilterBar 
         isOpen={isFilterOpen} 
         onClose={() => setIsFilterOpen(false)}
@@ -235,7 +255,7 @@ const VendasPage = () => {
           </div>
           <div>
             <label className={labelStyle}>Data de Entrega</label>
-            <input type="date" value={filtros.dataEntrega} onChange={(e) => setFiltros({...filtros, dataEntrega: e.target.value})} className={inputStyle} />
+            <input type="date" value={filtros.dataEntregue} onChange={(e) => setFiltros({...filtros, dataEntregue: e.target.value})} className={inputStyle} />
           </div>
           <div>
             <label className={labelStyle}>Faixa de Preço (R$)</label>

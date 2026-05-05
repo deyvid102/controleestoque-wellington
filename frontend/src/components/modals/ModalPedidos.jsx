@@ -10,7 +10,7 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
   const formatarDataParaInput = (data) => {
     if (!data) return '';
     const d = new Date(data);
-    if (isNaN(d.getTime())) return ''; // Valida se a data é válida
+    if (isNaN(d.getTime())) return ''; 
     return d.toISOString().split('T')[0];
   };
 
@@ -39,7 +39,6 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
     }
   }, [isOpen]);
 
-  // Sincroniza o estado quando o modal abre ou o pedido para editar muda
   useEffect(() => {
     if (isOpen) {
       if (pedidoParaEditar) {
@@ -58,7 +57,7 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
       } else {
         setPedido({
           ...initialState,
-          dataPedido: formatarDataParaInput(new Date()) // Garante data atual na nova venda
+          dataPedido: formatarDataParaInput(new Date())
         });
       }
     }
@@ -69,7 +68,6 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
       const produtoSelecionado = produtos.find(p => p._id === pedido.produto);
       if (produtoSelecionado && produtoSelecionado.valorUni) {
         const previsao = (parseFloat(produtoSelecionado.valorUni) * parseInt(pedido.quantidade)).toFixed(2);
-        // Só atualiza se o total for diferente para evitar loops
         if (previsao !== pedido.total) {
            setPedido(prev => ({ ...prev, total: previsao }));
         }
@@ -82,11 +80,18 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Preparar dados para envio (tratar strings vazias de data como null)
     const dadosParaEnviar = {
       ...pedido,
+      // Se a data estiver vazia, enviamos null para o banco não ignorar o campo
       dataEntregue: pedido.dataEntregue === '' ? null : pedido.dataEntregue
     };
+
+    // LOG PARA DEBUG
+    console.log("=== DADOS ENVIADOS PARA API ===");
+    console.log("ID do Pedido (se for edit):", pedidoParaEditar?._id);
+    console.log("Payload:", dadosParaEnviar);
+    console.log("Data de Entrega específica:", dadosParaEnviar.dataEntregue);
+    console.log("===============================");
 
     try {
       if (pedidoParaEditar?._id) {

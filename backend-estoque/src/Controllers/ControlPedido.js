@@ -1,23 +1,22 @@
 const Pedidos = require('../models/ModelPedido');
 
-// Removida a necessidade de getOrCreateCliente e Clientes model
-
 exports.create = async (req, res) => {
     try {
-        const { cliente, produto, quantidade, total, status, pago, dataPedido } = req.body;
+        // 1. ADICIONADO dataEntregue na desestruturação abaixo
+        const { cliente, produto, quantidade, total, status, pago, dataPedido, dataEntregue } = req.body;
 
-        // Agora criamos o pedido salvando o nome do cliente diretamente como string
         const novoPedido = await Pedidos.create({
-            cliente, // String required no seu novo Model
+            cliente, 
             produto,
             quantidade,
             total,
             status,
             pago,
+            // 2. ADICIONADO dataEntregue aqui para ser salvo no banco
+            dataEntregue, 
             dataPedido: dataPedido || new Date()
         });
 
-        // Retorna populado apenas com os dados do produto
         const pedidoCompleto = await Pedidos.findById(novoPedido._id)
             .populate('produto', 'nome precoVenda');
 
