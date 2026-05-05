@@ -96,6 +96,7 @@ const LoginPage = () => {
               onChange={handleChange}
               className={inputStyle}
             />
+            
           </div>
 
           <div className="relative">
