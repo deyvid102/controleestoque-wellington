@@ -10,6 +10,7 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
   const formatarDataParaInput = (data) => {
     if (!data) return '';
     const d = new Date(data);
+    if (isNaN(d.getTime())) return ''; // Valida se a data é válida
     return d.toISOString().split('T')[0];
   };
 
@@ -38,6 +39,7 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
     }
   }, [isOpen]);
 
+  // Sincroniza o estado quando o modal abre ou o pedido para editar muda
   useEffect(() => {
     if (isOpen) {
       if (pedidoParaEditar) {
@@ -54,17 +56,23 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
           dataEntregue: formatarDataParaInput(pedidoParaEditar.dataEntregue)
         });
       } else {
-        setPedido(initialState);
+        setPedido({
+          ...initialState,
+          dataPedido: formatarDataParaInput(new Date()) // Garante data atual na nova venda
+        });
       }
     }
   }, [isOpen, pedidoParaEditar]);
 
   useEffect(() => {
-    if (pedido.produto && pedido.quantidade > 0) {
+    if (pedido.produto && pedido.quantidade > 0 && produtos.length > 0) {
       const produtoSelecionado = produtos.find(p => p._id === pedido.produto);
       if (produtoSelecionado && produtoSelecionado.valorUni) {
         const previsao = (parseFloat(produtoSelecionado.valorUni) * parseInt(pedido.quantidade)).toFixed(2);
-        setPedido(prev => ({ ...prev, total: previsao }));
+        // Só atualiza se o total for diferente para evitar loops
+        if (previsao !== pedido.total) {
+           setPedido(prev => ({ ...prev, total: previsao }));
+        }
       }
     }
   }, [pedido.produto, pedido.quantidade, produtos]);
@@ -73,11 +81,18 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Preparar dados para envio (tratar strings vazias de data como null)
+    const dadosParaEnviar = {
+      ...pedido,
+      dataEntregue: pedido.dataEntregue === '' ? null : pedido.dataEntregue
+    };
+
     try {
       if (pedidoParaEditar?._id) {
-        await api.put(`/pedidos/${pedidoParaEditar._id}`, pedido);
+        await api.put(`/pedidos/${pedidoParaEditar._id}`, dadosParaEnviar);
       } else {
-        await api.post('/pedidos', pedido);
+        await api.post('/pedidos', dadosParaEnviar);
       }
       onRefresh(); 
       onClose();   
@@ -92,12 +107,10 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      {/* Container do Modal: No mobile sobe como folha, no desktop é centralizado */}
       <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl transition-all duration-300 transform animate-in slide-in-from-bottom-10 ${
         isDarkMode ? 'bg-slate-800 border-t border-x border-slate-700 sm:border' : 'bg-white border-t border-x border-slate-100 sm:border'
       }`}>
         
-        {/* "Alça" visual apenas para mobile */}
         <div className="flex justify-center pt-3 sm:hidden">
           <div className={`w-12 h-1.5 rounded-full ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
         </div>
@@ -111,7 +124,6 @@ const ModalPedidos = ({ isOpen, onClose, onRefresh, pedidoParaEditar = null }) =
           </button>
         </div>
 
-        {/* Scroll interno para o formulário no mobile (evita que o teclado quebre o layout) */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto pb-10 sm:pb-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
